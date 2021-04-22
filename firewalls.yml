@@ -1,0 +1,100 @@
+# vim: tabstop=2 expandtab shiftwidth=2 softtabstop=2 smartindent nu ft=yaml
+
+---
+
+# !!! this is just a draft / idea extracted from our real playbook in order to demonstrate
+# the pre- and post- run cfg fetch and git commit
+# ########################################################################################
+#
+# run w/:
+#  ansible-playbook -D [-l ...] firewalls.yml
+#
+# if you just have minor changes like rules and aliases it is safer to run:
+#  ansible-playbook -l .. -t vars,alias,filter,copy -D firewalls.yml
+#
+# for some kind of check mode use:
+#   -e skip_git_tasks=True --skip-tags copy,clean,reload,rls
+#
+# force reload:
+#  ansible-playbook -e '{ "config": { "changed": True } }' -l ... -t reload -D firewalls.yml
+#
+# just fetch the config and see the diff to the last saved state (might be used for extracting manualy created rules)
+#  ansible-playbook -e skip_git_tasks=True -l ... -t fetch -D firewalls.yml
+
+- name: pre ...
+  hosts: opnsense
+  gather_facts: no
+  vars:
+    ansible_become: no
+  handlers:
+    - import_tasks: handlers/main.yml
+  pre_tasks:
+    - name: "save config ..."
+      import_role:
+        name: opnsense
+        tasks_from: fetch
+      when:
+        - not ansible_check_mode
+        - not skip_git_tasks|default(False)
+      tags: always
+    - name: notify local git commit cfg before run
+      delegate_to: localhost
+      throttle: 1
+      command: "git commit --dry-run --porcelain --untracked-files=no {{ cfg_backup_dir|default('backup') }}/{{ backup_filename|default('config-' ~ inventory_hostname ~ '.xml') }} -m 'dry run test'"
+      register: git_ci_result
+      ignore_errors: True
+      failed_when:
+        - git_ci_result.rc > 255 # never; without this the notify is not working, despite of changed_when and ignore_errors
+      changed_when:
+        - git_ci_result.rc == 0
+        - "'backup/' in git_ci_result.stdout"
+      notify: local git commit cfg before run
+      when:
+        - not ansible_check_mode
+        - not skip_git_tasks|default(False)
+      tags: always
+
+- name: opnsense
+  hosts: opnsense
+  gather_facts: false
+  vars:
+    ansible_become: no
+  roles:
+    # ...
+    - role: opnsense # https://github.com/Rosa-Luxemburgstiftung-Berlin/ansible-opnsense
+      tags:
+        - opnsense
+    # ...
+
+- name: post tasks
+  hosts: opnsense
+  vars:
+    ansible_become: no
+  gather_facts: no
+  handlers:
+    - import_tasks: handlers/main.yml
+  post_tasks:
+    - name: "save config ..."
+      import_role:
+        name: opnsense
+        tasks_from: fetch
+      when:
+        - not ansible_check_mode
+        - not skip_git_tasks|default(False)
+      tags: always
+    - name: notify local git commit cfg after run
+      delegate_to: localhost
+      throttle: 1
+      command: "git commit --dry-run --porcelain --untracked-files=no {{ cfg_backup_dir|default('backup') }}/{{ backup_filename|default('config-' ~ inventory_hostname ~ '.xml') }} -m 'dry run test'"
+      register: git_ci_result
+      ignore_errors: True
+      failed_when:
+        - git_ci_result.rc > 255 # never
+      changed_when:
+        - git_ci_result.rc == 0
+        - "'backup/' in git_ci_result.stdout"
+      notify: local git commit cfg after run
+      when:
+        - not ansible_check_mode
+        - not skip_git_tasks|default(False)
+      tags: always
