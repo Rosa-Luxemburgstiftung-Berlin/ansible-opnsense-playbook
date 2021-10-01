@@ -56,7 +56,6 @@
 
 - name: opnsense
   hosts: opnsense
-  gather_facts: false
   vars:
     ansible_become: no
   roles:
