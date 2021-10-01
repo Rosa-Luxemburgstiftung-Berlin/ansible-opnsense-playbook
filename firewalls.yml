@@ -60,9 +60,18 @@
     ansible_become: no
   roles:
     # ...
+    - role: opnsense-facts
+      tags:
+        - opnsense
+        - facts
+        - always
     - role: opnsense # https://github.com/Rosa-Luxemburgstiftung-Berlin/ansible-opnsense
       tags:
         - opnsense
+    - role: opnsense-checkmk
+      tags:
+        - opnsense
+        - checkmk
     # ...
 
 - name: post tasks
