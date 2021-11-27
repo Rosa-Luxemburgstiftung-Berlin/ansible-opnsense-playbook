@@ -1,0 +1,18 @@
+# vim: tabstop=2 expandtab shiftwidth=2 softtabstop=2 smartindent nu ft=yaml
+---
+
+- name: local git commit cfg before run
+  delegate_to: localhost
+  command:
+    chdir: "{{ switch_cfg_backup_dir }}"
+    cmd: "git commit {{ backup_filename }} -m '{{ inventory_hostname }} : config before ansible run'"
+  throttle: 1 # avoid fatal: .../.git/index.lock': File exists.\n\nAnother git process seems to be running in this repository
+  
+- name: local git commit cfg after run
+  delegate_to: localhost
+  command:
+    chdir: "{{ switch_cfg_backup_dir }}"
+    cmd: "git commit {{ backup_filename }} -m '{{ inventory_hostname }} : config after ansible run'"
+  throttle: 1
+
+...
