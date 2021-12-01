@@ -5,7 +5,7 @@
   delegate_to: localhost
   command:
     chdir: "{{ switch_cfg_backup_dir }}"
-    cmd: "git commit {{ backup_filename }} -m '{{ inventory_hostname }} : config before ansible run'"
+    cmd: "git commit {{ backup_filename }} -m '{%if commit_msg_prefix is defined %}{{ commit_msg_prefix }} {% endif %}{{ inventory_hostname }} : config before ansible run'"
   throttle: 1 # avoid fatal: .../.git/index.lock': File exists.\n\nAnother git process seems to be running in this repository
   
 - name: local git commit cfg after run
