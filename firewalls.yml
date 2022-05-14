@@ -20,6 +20,15 @@
 #
 # just fetch the config and see the diff to the last saved state (might be used for extracting manualy created rules)
 #  ansible-playbook -e skip_git_tasks=True -l ... -t fetch -D firewalls.yml
+#
+# to generating a initial cfg without the connection to the box:
+# just save your initial cfg file or the upstream cfg from
+# https://raw.githubusercontent.com/opnsense/core/master/src/etc/config.xml.sample
+# to files/opnsense_initial_config.xml
+# and run
+#  ANSIBLE_GATHERING=explicit ansible-playbook --skip-tags fetch,facts,copy,clean,reload -e skip_git_tasks=True -e opnsense_initial_cfg=True -l ... -D firewalls.yml
+# and on the end of the run you will have the prepared config.xml
+# in {{ switch_cfg_backup_dir }}/{{ backup_filename }}
 
 - name: pre ...
   hosts: opnsense
@@ -53,6 +62,17 @@
         - not ansible_check_mode
         - not skip_git_tasks|default(False)
       tags: always
+
+      - name: copy initial state of opnsense cfg
+        delegate_to: localhost
+        copy:
+          src: opnsense_initial_config.xml
+          dest: "{{ switch_cfg_backup_dir }}/{{ backup_filename }}"
+          mode: 0644
+        tags:
+          - opnsense
+          - opnsenseinit
+        when: opnsense_initial_cfg | default(false)
 
 - name: opnsense
   hosts: opnsense
