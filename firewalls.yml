@@ -63,16 +63,16 @@
         - not skip_git_tasks|default(False)
       tags: always
 
-      - name: copy initial state of opnsense cfg
-        delegate_to: localhost
-        copy:
-          src: opnsense_initial_config.xml
-          dest: "{{ switch_cfg_backup_dir }}/{{ backup_filename }}"
-          mode: 0644
-        tags:
-          - opnsense
-          - opnsenseinit
-        when: opnsense_initial_cfg | default(false)
+    - name: copy initial state of opnsense cfg
+      delegate_to: localhost
+      copy:
+        src: opnsense_initial_config.xml
+        dest: "{{ switch_cfg_backup_dir }}/{{ backup_filename }}"
+        mode: 0644
+      tags:
+        - opnsense
+        - opnsenseinit
+      when: opnsense_initial_cfg | default(false)
 
 - name: opnsense
   hosts: opnsense
